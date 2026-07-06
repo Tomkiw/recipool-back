@@ -1,0 +1,55 @@
+backend-tasteorama/
+├── .editorconfig
+├── .env
+├── .gitignore
+├── .prettierrc
+├── eslint.config.js
+├── package.json
+├── package-lock.json
+├── swagger.json
+├── areas.json
+├── categories.json
+├── ingredients.json
+├── recipes.json
+├── testimonials.json
+├── users.json
+└── src/
+    ├── server.js
+    ├── constants/
+    │   └── time.js
+    ├── controllers/
+    │   ├── authController.js
+    │   ├── categoriesController.js
+    │ │   ├── categories.js
+    │   ├── ingredients.js
+    │   ├── recipe.js
+    │   ├── session.js
+    │   └── user.js
+    ├── routes/
+    │   ├── authRoutes.js
+    │   ├── categoriesRoutes.js
+    │   ├── ingredientsRoute.js
+    │   ├── recipesRoutes.js
+    │   └── userRoutes.js
+    ├── services/
+    │   ├── auth.js
+    │   ├── ingredients.js
+    │   └── recipes.js
+    ├── utils/
+    │   └── saveFileToCloudinary.js
+    └── validations/
+        ├── authValidation.js
+        ├── ingredientsValidation.js
+        └── recipesValidation.js   ├── ingredientsController.js
+    │   ├── recipesController.js
+    │   └── userController.js
+    ├── db/
+    │   └── connectMongoDB.js
+    ├── middleware/
+    │   ├── authenticate.js
+    │   ├── errorHandler.js
+    │   ├── logger.js
+    │   ├── multer.js
+    │   └── notFoundHandler.js
+    ├── models/
+
