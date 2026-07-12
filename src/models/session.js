@@ -27,4 +27,7 @@ const sessionSchema = new Schema(
   { timestamps: true },
 );
 
+// Automatically remove sessions once their refresh token has expired.
+sessionSchema.index({ refreshTokenValidUntil: 1 }, { expireAfterSeconds: 0 });
+
 export const Session = model('Session', sessionSchema);
