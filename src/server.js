@@ -12,16 +12,35 @@ import userRoutes from './routes/userRoutes.js';
 import { errors } from 'celebrate';
 import cookieParser from 'cookie-parser';
 import swaggerUi from 'swagger-ui-express';
-import swaggerDocument from '../swagger.json' with { type: 'json' };
+import { readFileSync } from 'node:fs';
 import ingredientsRouter from './routes/ingredientsRoute.js';
 
 const PORT = process.env.PORT ?? 3000;
 const app = express();
 
+// Load API docs defensively: an empty or malformed swagger.json must not crash boot.
+let swaggerDocument = null;
+try {
+  swaggerDocument = JSON.parse(
+    readFileSync(new URL('../swagger.json', import.meta.url), 'utf-8'),
+  );
+} catch {
+  console.warn('⚠️  swagger.json is missing or invalid — run "npm run swagger".');
+}
+
+const allowedOrigins = (process.env.FRONTEND_URL ?? '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
     origin: function (origin, callback) {
-      callback(null, true);
+      // Allow non-browser clients (no Origin header) and whitelisted frontends.
+      if (!origin || allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} is not allowed by CORS`));
     },
     credentials: true,
   }),
@@ -35,7 +54,9 @@ app.use(authRoutes);
 app.use(recipesRoutes);
 app.use(ingredientsRouter);
 app.use(categoriesRoutes);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+if (swaggerDocument) {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 app.use(userRoutes);
 
 app.use(notFoundHandler);

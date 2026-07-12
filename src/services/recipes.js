@@ -12,7 +12,7 @@ export const getRecipeByIdService = async (recipeId) => {
   }
 
   if (registered.includes('User')) {
-    query.populate('owner', 'username email avatar');
+    query.populate('owner', 'name email avatar');
   }
 
   return query;

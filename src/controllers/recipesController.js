@@ -86,8 +86,6 @@ export const getRecipeById = async (req, res, next) => {
 };
 
 export const createRecipe = async (req, res) => {
-  console.log(req.file, req.user);
-
   const {
     title,
     description,
@@ -115,7 +113,6 @@ export const createRecipe = async (req, res) => {
   let result = null;
   if (req.file) {
     result = await saveFileToCloudinary(req.file.buffer, req.user._id);
-    console.log(result);
   }
 
   const recipe = await Recipe.create({
