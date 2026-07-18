@@ -9,6 +9,7 @@ import {
   getMyRecipes,
   createRecipe,
   addRecipeToFavorites,
+  deleteRecipe,
 } from '../controllers/recipesController.js';
 import {
   getAllRecipesSchema,
@@ -50,6 +51,13 @@ router.delete(
   authenticate,
   celebrate(recipeIdSchema),
   deleteRecipeFromFavorite,
+);
+
+router.delete(
+  '/api/recipes/:recipeId',
+  authenticate,
+  celebrate(recipeIdSchema),
+  deleteRecipe,
 );
 
 router.get(

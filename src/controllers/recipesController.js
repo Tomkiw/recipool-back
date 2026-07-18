@@ -151,6 +151,41 @@ export const getMyRecipes = async (req, res) => {
   });
 };
 
+// Видаляємо власний рецепт
+export const deleteRecipe = async (req, res, next) => {
+  try {
+    const { recipeId } = req.params;
+
+    const recipe = await Recipe.findById(recipeId);
+
+    if (!recipe) {
+      throw createHttpError(404, 'Recipe not found');
+    }
+
+    // Видаляти рецепт може лише його власник
+    if (recipe.owner.toString() !== req.user._id.toString()) {
+      throw createHttpError(403, 'You can only delete your own recipes');
+    }
+
+    await recipe.deleteOne();
+
+    // Рецепт міг бути збережений іншими юзерами — прибираємо його
+    // з усіх списків улюблених, щоб не лишалось "мертвих" посилань.
+    await User.updateMany(
+      { favorites: recipeId },
+      { $pull: { favorites: recipeId } },
+    );
+
+    res.status(200).json({
+      status: 200,
+      message: 'Recipe deleted successfully',
+      data: { recipeId },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Видаляємо рецепт з улюблених користувача
 export const deleteRecipeFromFavorite = async (req, res, next) => {
   try {

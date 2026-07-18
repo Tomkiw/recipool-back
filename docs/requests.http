@@ -1,0 +1,98 @@
+### Recipes API — ручна перевірка бекенду
+### Відкрий у VS Code з розширенням "REST Client" (humao.rest-client) або в JetBrains HTTP Client.
+### Cookie (sessionId/accessToken/refreshToken) зберігаються між запитами автоматично.
+### Виконуй по порядку: register/login → далі приватні.
+
+@base = http://localhost:3000
+
+### 1. Реєстрація (ставить cookie)
+POST {{base}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Ivan",
+  "email": "ivan_{{$timestamp}}@mail.com",
+  "password": "12345678"
+}
+
+### 2. Логін (перезаписує cookie). Підстав реальний email/пароль існуючого юзера.
+POST {{base}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "ivan@mail.com",
+  "password": "12345678"
+}
+
+### 3. Поточний користувач (приватний)
+GET {{base}}/users/current
+
+### 4. Перевірка сесії (приватний)
+GET {{base}}/auth/session
+
+### 5. Оновлення сесії (за cookie)
+POST {{base}}/auth/refresh
+
+### 6. Категорії (публічний)
+GET {{base}}/api/categories
+
+### 7. Інгредієнти (публічний) + фільтр по назві
+GET {{base}}/api/ingredients?name=chi
+
+### 8. Пошук рецептів (публічний) — пагінація + фільтри
+GET {{base}}/api/recipes?page=1&perPage=12&keyword=soup
+
+### 9. Пошук за категорією та інгредієнтом
+GET {{base}}/api/recipes?category=Beef&ingredient=onion&page=1&perPage=6
+
+### 10. Рецепт за id (публічний). Підстав реальний recipeId.
+GET {{base}}/api/recipes/000000000000000000000000
+
+### 11. Створення рецепта (приватний, multipart). Підстав реальні id інгредієнтів і назву категорії.
+POST {{base}}/api/recipes
+Content-Type: multipart/form-data; boundary=----boundary
+
+------boundary
+Content-Disposition: form-data; name="title"
+
+Test recipe
+------boundary
+Content-Disposition: form-data; name="description"
+
+Short description
+------boundary
+Content-Disposition: form-data; name="time"
+
+40
+------boundary
+Content-Disposition: form-data; name="calories"
+
+350
+------boundary
+Content-Disposition: form-data; name="category"
+
+Beef
+------boundary
+Content-Disposition: form-data; name="instructions"
+
+Mix everything and cook.
+------boundary
+Content-Disposition: form-data; name="ingredients"
+
+[{"id":"PUT_REAL_INGREDIENT_ID_1","measure":"200g"},{"id":"PUT_REAL_INGREDIENT_ID_2","measure":"1 pc"}]
+------boundary--
+
+### 12. Власні рецепти (приватний)
+GET {{base}}/api/my/recipes?page=1&perPage=10
+
+### 13. Додати в улюблені (приватний). Підстав реальний recipeId.
+POST {{base}}/api/recipes/000000000000000000000000/favorite
+
+### 14. Улюблені рецепти (приватний)
+GET {{base}}/api/recipes/favorites?page=1&perPage=12
+
+### 15. Прибрати з улюблених (приватний)
+DELETE {{base}}/api/recipes/000000000000000000000000/favorite
+
+### 16. Логаут (приватний) — чистить cookie
+POST {{base}}/auth/logout
