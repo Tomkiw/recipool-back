@@ -74,6 +74,10 @@ web_modules/
 .env.*
 !.env.example
 
+# curl cookie jars (contain real session tokens)
+cookies.txt
+*.cookies
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache
