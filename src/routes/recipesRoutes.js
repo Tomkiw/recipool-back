@@ -10,6 +10,7 @@ import {
   createRecipe,
   addRecipeToFavorites,
   deleteRecipe,
+  updateRecipe,
 } from '../controllers/recipesController.js';
 import {
   getAllRecipesSchema,
@@ -17,6 +18,7 @@ import {
   recipeIdSchema,
   createRecipeSchema,
   getFavoriteRecipesSchema,
+  updateRecipeSchema,
 } from '../validations/recipesValidation.js';
 import { upload } from '../middleware/multer.js';
 
@@ -51,6 +53,14 @@ router.delete(
   authenticate,
   celebrate(recipeIdSchema),
   deleteRecipeFromFavorite,
+);
+
+router.patch(
+  '/api/recipes/:recipeId',
+  authenticate,
+  upload.single('image'),
+  celebrate(updateRecipeSchema),
+  updateRecipe,
 );
 
 router.delete(

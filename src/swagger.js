@@ -74,6 +74,24 @@ const doc = {
           image: { type: 'string', format: 'binary' },
         },
       },
+      // Те саме, що RecipeInput, але всі поля опційні — часткове оновлення.
+      RecipeUpdateInput: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', maxLength: 64 },
+          description: { type: 'string', maxLength: 200 },
+          time: { type: 'number', minimum: 1, maximum: 360 },
+          calories: { type: 'integer', minimum: 1, maximum: 10000 },
+          category: { type: 'string' },
+          instructions: { type: 'string', maxLength: 1200 },
+          ingredients: {
+            type: 'string',
+            description:
+              'JSON string of an array [{ "id": "...", "measure": "..." }] (2-16 items).',
+          },
+          image: { type: 'string', format: 'binary' },
+        },
+      },
     },
   },
   paths: {
@@ -186,6 +204,42 @@ const doc = {
         summary: 'Get a recipe by id',
         parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
         responses: { 200: { description: 'Recipe' }, 404: { description: 'Not found' } },
+      },
+      patch: {
+        tags: ['Recipes'],
+        summary: 'Update a recipe owned by the current user',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: { $ref: '#/components/schemas/RecipeUpdateInput' },
+            },
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RecipeUpdateInput' },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Recipe updated' },
+          400: { description: 'Validation error or no fields to update' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden — not the recipe owner' },
+          404: { description: 'Not found' },
+        },
+      },
+      delete: {
+        tags: ['Recipes'],
+        summary: 'Delete a recipe owned by the current user',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Recipe deleted' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden — not the recipe owner' },
+          404: { description: 'Not found' },
+        },
       },
     },
     '/api/recipes/{recipeId}/favorite': {

@@ -66,9 +66,25 @@ export const createRecipeSchema = {
     category: Joi.string().required(),
     ingredients: Joi.any().custom(parseAndValidateIngredients).required(),
     instructions: Joi.string().max(1200).required(),
-  }),
+  }).required(),
 };
-export const updateRecipeSchema = {};
+
+// Часткове оновлення: усі поля опційні, але тіло має бути присутнім.
+// Порожній об'єкт допустимий — оновлюватись може лише картинка (req.file).
+export const updateRecipeSchema = {
+  [Segments.PARAMS]: Joi.object({
+    recipeId: Joi.string().custom(objectIdValidator).required(),
+  }),
+  [Segments.BODY]: Joi.object({
+    title: Joi.string().max(64),
+    description: Joi.string().max(200),
+    time: Joi.number().min(1).max(360),
+    calories: Joi.number().integer().min(1).max(10000),
+    category: Joi.string(),
+    ingredients: Joi.any().custom(parseAndValidateIngredients),
+    instructions: Joi.string().max(1200),
+  }).required(),
+};
 
 export const getFavoriteRecipesSchema = {
   [Segments.QUERY]: Joi.object({

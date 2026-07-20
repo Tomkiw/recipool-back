@@ -151,6 +151,67 @@ export const getMyRecipes = async (req, res) => {
   });
 };
 
+// Оновлюємо власний рецепт
+export const updateRecipe = async (req, res, next) => {
+  try {
+    const { recipeId } = req.params;
+
+    const recipe = await Recipe.findById(recipeId);
+
+    if (!recipe) {
+      throw createHttpError(404, 'Recipe not found');
+    }
+
+    // Редагувати рецепт може лише його власник
+    if (recipe.owner.toString() !== req.user._id.toString()) {
+      throw createHttpError(403, 'You can only edit your own recipes');
+    }
+
+    const updates = { ...req.body };
+
+    if (!Object.keys(updates).length && !req.file) {
+      throw createHttpError(400, 'No fields to update');
+    }
+
+    if (updates.category) {
+      const categoryExists = await Categories.findOne({
+        name: updates.category,
+      });
+      if (!categoryExists) {
+        throw createHttpError(400, 'Category not found');
+      }
+    }
+
+    if (updates.ingredients) {
+      const uniqueIds = [...new Set(updates.ingredients.map((item) => item.id))];
+      const existingIngredientsCount = await Ingredient.countDocuments({
+        _id: { $in: uniqueIds },
+      });
+
+      if (existingIngredientsCount !== uniqueIds.length) {
+        throw createHttpError(400, 'One or more ingredients not found');
+      }
+    }
+
+    // Стару картинку лишаємо, якщо нову не вдалося завантажити
+    if (req.file) {
+      const result = await saveFileToCloudinary(req.file.buffer, req.user._id);
+      updates.image = result?.secure_url || recipe.image;
+    }
+
+    Object.assign(recipe, updates);
+    await recipe.save();
+
+    res.status(200).json({
+      status: 200,
+      message: 'Recipe updated successfully',
+      data: recipe,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Видаляємо власний рецепт
 export const deleteRecipe = async (req, res, next) => {
   try {
