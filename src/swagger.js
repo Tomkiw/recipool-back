@@ -1,0 +1,319 @@
+import { writeFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const outputFile = join(__dirname, '..', 'swagger.json');
+
+const cookieAuth = { cookieAuth: [] };
+
+const doc = {
+  openapi: '3.0.0',
+  info: {
+    title: 'Recipes API',
+    version: '1.0.0',
+    description:
+      'REST API for the Recipes app: authentication, recipes, favorites, ingredients, categories and users.',
+  },
+  servers: [{ url: '/', description: 'Current host' }],
+  tags: [
+    { name: 'Auth' },
+    { name: 'Recipes' },
+    { name: 'Ingredients' },
+    { name: 'Categories' },
+    { name: 'Users' },
+  ],
+  components: {
+    securitySchemes: {
+      cookieAuth: { type: 'apiKey', in: 'cookie', name: 'accessToken' },
+    },
+    schemas: {
+      Error: {
+        type: 'object',
+        properties: { message: { type: 'string' } },
+      },
+      RegisterInput: {
+        type: 'object',
+        required: ['name', 'email', 'password'],
+        properties: {
+          name: { type: 'string', maxLength: 16, example: 'John' },
+          email: { type: 'string', format: 'email', example: 'john@mail.com' },
+          password: { type: 'string', minLength: 8, example: 'password123' },
+        },
+      },
+      LoginInput: {
+        type: 'object',
+        required: ['email', 'password'],
+        properties: {
+          email: { type: 'string', format: 'email', example: 'john@mail.com' },
+          password: { type: 'string', minLength: 8, example: 'password123' },
+        },
+      },
+      RecipeInput: {
+        type: 'object',
+        required: [
+          'title',
+          'description',
+          'time',
+          'category',
+          'ingredients',
+          'instructions',
+        ],
+        properties: {
+          title: { type: 'string', maxLength: 64 },
+          description: { type: 'string', maxLength: 200 },
+          time: { type: 'number', minimum: 1, maximum: 360 },
+          calories: { type: 'integer', minimum: 1, maximum: 10000 },
+          category: { type: 'string' },
+          instructions: { type: 'string', maxLength: 1200 },
+          ingredients: {
+            type: 'string',
+            description:
+              'JSON string of an array [{ "id": "...", "measure": "..." }] (2-16 items).',
+          },
+          image: { type: 'string', format: 'binary' },
+        },
+      },
+      // Те саме, що RecipeInput, але всі поля опційні — часткове оновлення.
+      RecipeUpdateInput: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', maxLength: 64 },
+          description: { type: 'string', maxLength: 200 },
+          time: { type: 'number', minimum: 1, maximum: 360 },
+          calories: { type: 'integer', minimum: 1, maximum: 10000 },
+          category: { type: 'string' },
+          instructions: { type: 'string', maxLength: 1200 },
+          ingredients: {
+            type: 'string',
+            description:
+              'JSON string of an array [{ "id": "...", "measure": "..." }] (2-16 items).',
+          },
+          image: { type: 'string', format: 'binary' },
+        },
+      },
+    },
+  },
+  paths: {
+    '/auth/register': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Register a new user',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RegisterInput' },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'User created; session cookies set' },
+          400: { description: 'Email already in use / validation error' },
+        },
+      },
+    },
+    '/auth/login': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Log in',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: { $ref: '#/components/schemas/LoginInput' },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Logged in; session cookies set' },
+          401: { description: 'Invalid credentials' },
+        },
+      },
+    },
+    '/auth/session': {
+      get: {
+        tags: ['Auth'],
+        summary: 'Get current authenticated session',
+        security: [cookieAuth],
+        responses: { 200: { description: 'Authenticated user' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/auth/refresh': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Refresh the session using cookies',
+        responses: { 200: { description: 'Session refreshed' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/auth/logout': {
+      post: {
+        tags: ['Auth'],
+        summary: 'Log out and clear session',
+        security: [cookieAuth],
+        responses: { 204: { description: 'Logged out' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/api/recipes': {
+      get: {
+        tags: ['Recipes'],
+        summary: 'List recipes (paginated, filterable)',
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'perPage', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+          { name: 'category', in: 'query', schema: { type: 'string' } },
+          { name: 'ingredient', in: 'query', schema: { type: 'string' } },
+          { name: 'keyword', in: 'query', schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'Paginated recipes' } },
+      },
+      post: {
+        tags: ['Recipes'],
+        summary: 'Create a recipe',
+        security: [cookieAuth],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: { $ref: '#/components/schemas/RecipeInput' },
+            },
+          },
+        },
+        responses: {
+          201: { description: 'Recipe created' },
+          400: { description: 'Validation error' },
+          401: { description: 'Unauthorized' },
+        },
+      },
+    },
+    '/api/recipes/favorites': {
+      get: {
+        tags: ['Recipes'],
+        summary: 'List the current user favorite recipes',
+        security: [cookieAuth],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'perPage', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 12 } },
+        ],
+        responses: { 200: { description: 'Paginated favorites' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/api/recipes/{recipeId}': {
+      get: {
+        tags: ['Recipes'],
+        summary: 'Get a recipe by id',
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Recipe' }, 404: { description: 'Not found' } },
+      },
+      patch: {
+        tags: ['Recipes'],
+        summary: 'Update a recipe owned by the current user',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: { $ref: '#/components/schemas/RecipeUpdateInput' },
+            },
+            'application/json': {
+              schema: { $ref: '#/components/schemas/RecipeUpdateInput' },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Recipe updated' },
+          400: { description: 'Validation error or no fields to update' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden — not the recipe owner' },
+          404: { description: 'Not found' },
+        },
+      },
+      delete: {
+        tags: ['Recipes'],
+        summary: 'Delete a recipe owned by the current user',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: {
+          200: { description: 'Recipe deleted' },
+          401: { description: 'Unauthorized' },
+          403: { description: 'Forbidden — not the recipe owner' },
+          404: { description: 'Not found' },
+        },
+      },
+    },
+    '/api/recipes/{recipeId}/favorite': {
+      post: {
+        tags: ['Recipes'],
+        summary: 'Add a recipe to favorites',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Added' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+      },
+      delete: {
+        tags: ['Recipes'],
+        summary: 'Remove a recipe from favorites',
+        security: [cookieAuth],
+        parameters: [{ name: 'recipeId', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Removed' }, 401: { description: 'Unauthorized' }, 404: { description: 'Not found' } },
+      },
+    },
+    '/api/my/recipes': {
+      get: {
+        tags: ['Recipes'],
+        summary: 'List recipes owned by the current user',
+        security: [cookieAuth],
+        parameters: [
+          { name: 'page', in: 'query', schema: { type: 'integer', minimum: 1, default: 1 } },
+          { name: 'perPage', in: 'query', schema: { type: 'integer', minimum: 1, maximum: 50, default: 10 } },
+        ],
+        responses: { 200: { description: 'Paginated recipes' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/api/ingredients': {
+      get: {
+        tags: ['Ingredients'],
+        summary: 'List ingredients (optionally filtered by name)',
+        parameters: [{ name: 'name', in: 'query', schema: { type: 'string' } }],
+        responses: { 200: { description: 'Ingredients' } },
+      },
+    },
+    '/api/categories': {
+      get: {
+        tags: ['Categories'],
+        summary: 'List categories',
+        responses: { 200: { description: 'Categories' } },
+      },
+    },
+    '/users/current': {
+      get: {
+        tags: ['Users'],
+        summary: 'Get the current user',
+        security: [cookieAuth],
+        responses: { 200: { description: 'Current user' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+    '/users/avatar': {
+      patch: {
+        tags: ['Users'],
+        summary: 'Update the current user avatar',
+        security: [cookieAuth],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                properties: { avatar: { type: 'string', format: 'binary' } },
+              },
+            },
+          },
+        },
+        responses: { 200: { description: 'Avatar updated' }, 400: { description: 'No file' }, 401: { description: 'Unauthorized' } },
+      },
+    },
+  },
+};
+
+writeFileSync(outputFile, JSON.stringify(doc, null, 2));
+console.log(`✅ swagger.json generated at ${outputFile}`);
